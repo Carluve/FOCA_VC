@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply min-h-screen font-mono;
+    background-color: #0a0a0a;
+  }
+
+  /* Selection in green */
+  ::selection {
+    @apply bg-foca-500/30 text-foca-300;
+  }
+
+  /* Custom scrollbar - hacker green */
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-foca-900 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-foca-700;
+  }
+}
+
+@layer components {
+  /* Scanline overlay for retro CRT effect */
+  .scanlines {
+    position: relative;
+  }
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  /* Green glow text effect */
+  .text-glow {
+    text-shadow: 0 0 6px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.2);
+  }
+
+  /* Green glow border */
+  .border-glow {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.15), inset 0 0 8px rgba(16, 185, 129, 0.05);
+  }
+
+  /* Terminal prompt cursor */
+  .cursor-blink::after {
+    content: "_";
+    @apply animate-blink text-foca-400;
+  }
+}

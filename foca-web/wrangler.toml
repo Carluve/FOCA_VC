@@ -1,0 +1,79 @@
+# =============================================================================
+# FOCA Web - Cloudflare Workers Configuration (Wrangler v4)
+# =============================================================================
+# Deployed as a Worker with static assets.
+# The frontend (React/Vite) builds to /dist and is served as static assets.
+# The backend (Hono) runs as the Worker entry point for /api/* routes.
+# =============================================================================
+
+name = "foca-web"
+main = "src/worker/index.ts"
+compatibility_date = "2026-03-13"
+compatibility_flags = ["nodejs_compat"]
+account_id = "39f8ea10b94ad38470fc3c20c260efdc"
+
+# -----------------------------------------------------------------------------
+# Static Assets (replaces Cloudflare Pages)
+# Vite builds the frontend to dist/. The Worker handles /api/* routes,
+# everything else falls through to static assets (SPA mode).
+# -----------------------------------------------------------------------------
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# -----------------------------------------------------------------------------
+# D1 Database Binding
+# After running: wrangler d1 create foca-db
+# Replace the database_id below with the real ID from the output.
+# -----------------------------------------------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "foca-db"
+database_id = "63a368de-c5e0-4078-ac17-c37a9485bbfe"
+migrations_dir = "migrations"
+
+# -----------------------------------------------------------------------------
+# R2 Object Storage Binding
+# After running: wrangler r2 bucket create foca-files
+# Used to store original uploaded files and cleaned versions.
+# -----------------------------------------------------------------------------
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "foca-files"
+
+# -----------------------------------------------------------------------------
+# KV Namespace Binding (optional, for session/cache)
+# After running: wrangler kv namespace create CACHE
+# Replace the id below with the real namespace ID.
+# -----------------------------------------------------------------------------
+[[kv_namespaces]]
+binding = "CACHE"
+id = "d560e3cca984471f83c7ae2cee2dfe8d"
+
+# -----------------------------------------------------------------------------
+# Workers AI Binding (routed through AI Gateway "foca-v1")
+# The AI binding gives access to Workers AI models.
+# AI Gateway provides observability, caching, rate limiting, and logging.
+# Create the gateway in the dashboard: AI > AI Gateway > Create > "foca-v1"
+# -----------------------------------------------------------------------------
+[ai]
+binding = "AI"
+
+# -----------------------------------------------------------------------------
+# Turnstile secret key (for bot protection on login)
+# Set in the Cloudflare dashboard under:
+#   Settings > Environment Variables > TURNSTILE_SECRET_KEY
+# For local dev, add to .dev.vars:
+#   TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# -----------------------------------------------------------------------------
+
+[vars]
+ENVIRONMENT = "production"
+
+# -----------------------------------------------------------------------------
+# Observability (Workers Logs)
+# -----------------------------------------------------------------------------
+[observability]
+enabled = true

@@ -1,0 +1,38 @@
+{
+  "name": "foca-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "db:create": "wrangler d1 create foca-db",
+    "db:migrate:local": "wrangler d1 migrations apply foca-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply foca-db --remote",
+    "r2:create": "wrangler r2 bucket create foca-files",
+    "dev:worker": "wrangler dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "jszip": "^3.10.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.27.0",
+    "react-dropzone": "^14.2.9"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260313.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "wrangler": "^4.73.0"
+  }
+}
