@@ -1,0 +1,214 @@
+<!-- 
+=============================================================================
+POST PARA EL LADO DEL MAL
+Título: De C# y Windows a TypeScript y Cloudflare Workers: Resucitando FOCA con OpenCode
+=============================================================================
+INSTRUCCIONES PARA BLOGGER:
+- Pegar el contenido entre las etiquetas <post-body> en el editor HTML de Blogger
+- Subir las 4 imágenes de la carpeta POST/ a Blogger (o a cualquier CDN)
+  y reemplazar las URLs marcadas con [SUBIR_IMAGEN_X]
+- Etiquetas sugeridas: Cloudflare, Workers, OpenCode, FOCA, OSINT, TypeScript, IA, Ciberseguridad
+=============================================================================
+-->
+
+<p>
+Si la semana pasada <a href="https://www.elladodelmal.com/2026/03/como-migrar-arkanoid-de-c-typescript.html">migramos el Arkanoid de C++ a TypeScript</a> con <b>OpenCode</b> y lo desplegamos en Cloudflare Workers en una tarde, esta semana teníamos que subir el listón. Y nada mejor para hacerlo que coger una herramienta que muchos de vosotros conocéis de sobra: <b>FOCA</b>.
+</p>
+
+<p>
+Sí, <b>FOCA (Fingerprinting Organizations with Collected Archives)</b>, la herramienta de análisis de metadatos que creó el equipo de ElevenPaths y que lleva años siendo referencia en el mundo del OSINT y el pentesting. La aplicación de escritorio para Windows escrita en C# que muchos habéis usado para encontrar usuarios, rutas internas, servidores e información sensible escondida en los metadatos de los documentos corporativos.
+</p>
+
+<p>
+El reto esta vez era más ambicioso que el Arkanoid: no solo migrar el código, sino <b>modernizar la solución completa</b>: interfaz web, backend serverless, base de datos en la nube, almacenamiento de ficheros, protección anti-bots, análisis con IA y despliegue continuo. Todo en Cloudflare. Todo sin servidores. Y con <b>OpenCode</b> llevando el peso técnico.
+</p>
+
+<a name='more'></a>
+
+<h2>El origen: FOCA en GitHub, 3.400 estrellas y 100% C#</h2>
+
+<p>
+Empecemos por el principio. El repositorio original de FOCA en GitHub tiene 3.400 estrellas, 611 forks y está escrito en <b>C# al 100%</b>. Es una aplicación de escritorio con Windows Forms, dependencias de .NET y una arquitectura que en su momento fue muy sólida, pero que hoy exige que el usuario tenga una máquina Windows con el entorno instalado para poder ejecutarla.
+</p>
+
+<!-- IMAGEN 1: GitHub de FOCA original -->
+<div class="separator" style="clear: both; text-align: center;">
+<a href="[SUBIR_IMAGEN_03-foca-original-github.png]" imageanchor="1" style="margin-left: 1em; margin-right: 1em;">
+<img border="0" data-original-height="980" data-original-width="1232" width="640" src="[SUBIR_IMAGEN_03-foca-original-github.png]" /></a>
+</div>
+<br />
+
+<p>
+El repositorio tiene el código organizado en varios proyectos: el motor de extracción de metadatos (<i>MetadataExtractCore</i>), los buscadores y crawlers, los plugins, y la interfaz de usuario. Una arquitectura de hace diez años, con todas las dependencias que eso implica.
+</p>
+
+<p>
+La pregunta era: ¿se puede recrear la funcionalidad principal de FOCA —extracción de metadatos de documentos— en una aplicación web moderna, serverless, accesible desde cualquier dispositivo y desplegada en la red de Cloudflare? La respuesta, spoiler, es que sí. Y además con cosas que la FOCA original no tenía, como <b>análisis de seguridad generado por IA</b>.
+</p>
+
+<h2>La sesión de OpenCode: 115 mensajes, $4,96 y un proyecto completo</h2>
+
+<p>
+Antes de ver el resultado, hay que hablar del proceso. Porque esta vez no fue una sesión de una hora. Fue una sesión de trabajo real, con OpenCode como copiloto técnico, gestionando decisiones de arquitectura, escribiendo código, detectando errores de tipos en TypeScript y desplegando en Cloudflare.
+</p>
+
+<!-- IMAGEN 2: Sesión de OpenCode con estadísticas -->
+<div class="separator" style="clear: both; text-align: center;">
+<a href="[SUBIR_IMAGEN_04-opencode-session.png]" imageanchor="1" style="margin-left: 1em; margin-right: 1em;">
+<img border="0" data-original-height="980" data-original-width="1232" width="640" src="[SUBIR_IMAGEN_04-opencode-session.png]" /></a>
+</div>
+<br />
+
+<p>
+Si os fijáis en los números de la sesión: <b>115 mensajes</b>, proveedor <b>Anthropic vía Cloudflare AI Gateway</b>, modelo <b>Claude Opus 4.6</b>, 93.677 tokens totales, coste total <b>$4,96</b>. Por menos de cinco dólares, OpenCode escribió toda la arquitectura del proyecto, todos los componentes frontend, todas las rutas del backend, las migraciones de base de datos, los extractores de metadatos para PDF y Office, la integración con Workers AI, el widget de Turnstile y el README completo.
+</p>
+
+<p>
+Y lo más interesante del screenshot: fijaos en que el propio OpenCode está usando <b>Cloudflare AI Gateway</b> para enrutar sus llamadas a Claude. Es decir, la herramienta que estamos usando para construir sobre Cloudflare está ella misma corriendo sobre Cloudflare. Inception nivel empresarial.
+</p>
+
+<h2>La arquitectura: todo Cloudflare, cero servidores</h2>
+
+<p>
+La FOCA Web que hemos construido usa el stack completo de Cloudflare:
+</p>
+
+<ul>
+<li><b>Cloudflare Workers</b> — El backend completo corre como un Worker. Un único binario JavaScript/TypeScript que maneja todas las rutas de la API (<code>/api/analyze</code>, <code>/api/result/:id</code>, <code>/api/summarize/:id</code>…) usando <b>Hono</b> como framework HTTP.</li>
+<li><b>Static Assets en Workers</b> — El frontend React/Vite se sirve directamente desde el Worker con el nuevo sistema de <code>[assets]</code> de Wrangler v4. Nada de Pages, nada de CDN separado. Un solo despliegue: <code>wrangler deploy</code>.</li>
+<li><b>D1</b> — Base de datos SQLite gestionada por Cloudflare. Guarda cada análisis con su estado, los metadatos extraídos en JSON, el resumen de IA y los logs de procesamiento.</li>
+<li><b>R2</b> — Almacenamiento de objetos compatible con S3. Cada fichero subido se guarda en R2 para poder descargarlo limpio después.</li>
+<li><b>Workers AI</b> — Inferencia de IA en el edge. El modelo <code>@cf/meta/llama-3.3-70b-instruct-fp8-fast</code> genera el análisis de seguridad de los metadatos directamente desde el Worker, sin llamadas externas.</li>
+<li><b>AI Gateway</b> — Todas las llamadas a Workers AI pasan por el gateway <i>foca-v1</i>, que proporciona observabilidad, caché, logs y control de rate limiting.</li>
+<li><b>Turnstile</b> — Protección anti-bots en el login. El widget se integra en el frontend, la verificación se hace server-side en el Worker.</li>
+</ul>
+
+<h2>Lo que no fue trivial: los extractores de metadatos sin Node.js</h2>
+
+<p>
+Aquí está el reto técnico real de la migración. El runtime de Cloudflare Workers <b>no es Node.js</b>. Es V8 puro, con las APIs de Web Platform pero sin acceso al sistema de ficheros, sin <code>fs</code>, sin la mayoría de los módulos de Node. Esto descarta de golpe herramientas como <code>exiftool</code>, <code>pdf-parse</code> en su versión completa o cualquier librería que dependa del sistema operativo.
+</p>
+
+<p>
+La solución para los <b>documentos Office</b> (DOCX, XLSX, PPTX) fue elegante: estos formatos son ZIPs por dentro. Usando <b>JSZip</b>, que funciona perfectamente en Workers, se descomprime el fichero, se leen los XMLs de propiedades (<code>docProps/core.xml</code>, <code>docProps/app.xml</code>) y se extraen los campos: autor, empresa, último editor, fechas, rutas de template...
+</p>
+
+<p>
+Para los <b>PDFs</b> el enfoque fue diferente. Los metadatos en un PDF están en el diccionario <code>/Info</code> del documento, embebidos como texto en el binario. OpenCode implementó un extractor que lee el fichero como <code>ArrayBuffer</code>, lo decodifica en <code>latin1</code> (para preservar los bytes binarios) y usa expresiones regulares para extraer los campos del diccionario: <code>/Author (valor)</code>, <code>/Creator (valor)</code>, <code>/Producer (valor)</code>, etc.
+</p>
+
+<p>
+El mismo approach se usa para la limpieza: se reemplazan los valores por cadenas vacías en el binario, se parchea también el bloque XMP si existe, y se recodifica de vuelta a <code>Uint8Array</code>. Sin librerías externas, sin Node, puro JavaScript en el edge.
+</p>
+
+<h2>El resumen de IA que se persiste solo</h2>
+
+<p>
+Una de las funciones más interesantes es el análisis de seguridad generado por IA. Cuando el usuario pulsa <i>"ai_summary"</i> en la pantalla de resultados, el Worker llama a Workers AI con el modelo Llama 3.3 70B y un prompt que describe los metadatos extraídos: usuarios encontrados, emails, rutas internas, software usado, sistema operativo...
+</p>
+
+<p>
+El modelo responde en español con un análisis estructurado: qué información sensible se ha encontrado, qué riesgos implica y qué recomendaciones hay para limpiar el documento antes de compartirlo. Pero lo interesante es lo que pasa después: el resumen se <b>guarda en D1</b> en una columna <code>ai_summary</code>. La próxima vez que alguien abra ese análisis, el resumen aparece directamente, sin llamar a la IA de nuevo. Caché persistente con cero infraestructura adicional.
+</p>
+
+<!-- IMAGEN 3: Análisis de IA en la interfaz -->
+<div class="separator" style="clear: both; text-align: center;">
+<a href="[SUBIR_IMAGEN_02-foca-web-ai-summary.png]" imageanchor="1" style="margin-left: 1em; margin-right: 1em;">
+<img border="0" data-original-height="980" data-original-width="1232" width="640" src="[SUBIR_IMAGEN_02-foca-web-ai-summary.png]" /></a>
+</div>
+<br />
+
+<p>
+En la imagen podéis ver un análisis real de un PDF. El modelo ha identificado que el documento fue creado con <b>LaTeX con hyperref</b> y producido con <b>pdfTeX-1.40.27</b>, ha analizado las fechas de creación y modificación, y ha concluido que aunque no hay información altamente sensible, el software usado podría ser relevante para un atacante que quisiera explotar vulnerabilidades conocidas de esa versión. Todo en español, bien estructurado, con recomendaciones concretas.
+</p>
+
+<h2>La interfaz: terminal hacker verde porque sí</h2>
+
+<p>
+Y aquí viene la parte que más me gusta del proyecto. Cuando le dijimos a OpenCode que queríamos una interfaz "retro hacker verde pero que se vea moderna", el resultado fue exactamente lo que teníamos en mente: fondo negro <code>#0a0a0a</code>, texto en verde esmeralda, fuente <b>JetBrains Mono</b>, efecto CRT de scanlines con CSS puro, comandos de terminal como titulos de sección (<code>$ analyze --upload</code>, <code>$ history --list</code>), y la barra de título de las ventanas con los tres puntos rojo/amarillo/verde de macOS.
+</p>
+
+<!-- IMAGEN 4: Dashboard con historial de análisis -->
+<div class="separator" style="clear: both; text-align: center;">
+<a href="[SUBIR_IMAGEN_01-foca-web-dashboard.png]" imageanchor="1" style="margin-left: 1em; margin-right: 1em;">
+<img border="0" data-original-height="980" data-original-width="1232" width="640" src="[SUBIR_IMAGEN_01-foca-web-dashboard.png]" /></a>
+</div>
+<br />
+
+<p>
+En el dashboard podéis ver el historial real de análisis. PDFs de todo tipo: un whitepaper de diseño de 3,9 MB, un perfil corporativo de 1,5 MB, DOCX de propuestas... y en la barra inferior el footer que no podía faltar: <i>"powered_by :: ☁ Cloudflare Workers"</i>.
+</p>
+
+<p>
+El login tiene el widget de <b>Cloudflare Turnstile</b> integrado. La contraseña se hashea en el navegador con SHA-256 usando la Web Crypto API antes de compararse, así el hash va en el build pero la contraseña real nunca aparece en el bundle. Y la secret key de Turnstile vive como secreto del Worker, nunca en el código.
+</p>
+
+<h2>Wrangler v4 y la migración de Pages a Workers</h2>
+
+<p>
+Un detalle importante del proceso: el proyecto empezó con Cloudflare Pages (el servicio tradicional para frontends estáticos con Functions). Durante el desarrollo, lo migramos completamente a <b>Workers con Static Assets</b>, que es el nuevo modelo unificado de Wrangler v4.
+</p>
+
+<p>
+La diferencia es conceptual: en lugar de tener un proyecto Pages con Functions separadas, ahora tienes un único Worker que tiene acceso a los assets estáticos de tu frontend a través del binding <code>env.ASSETS</code>. El <code>wrangler.toml</code> queda así:
+</p>
+
+<pre style="background:#0a0a0a; color:#10b981; padding:16px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:13px; overflow-x:auto;">
+name = "foca-web"
+main = "src/worker/index.ts"
+compatibility_date = "2026-03-13"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "foca-db"
+database_id = "..."
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "foca-files"
+
+[ai]
+binding = "AI"
+</pre>
+
+<p>
+Con <code>run_worker_first = ["/api/*"]</code> le decimos al runtime que las rutas de API pasen por el Worker antes de intentar servir un asset. Todo lo demás (el frontend React) se sirve directamente desde la CDN de Cloudflare sin tocar el Worker. Elegante y eficiente.
+</p>
+
+<h2>El resultado: Fear the FOCA, ahora en el cloud</h2>
+
+<p>
+En resumen, lo que hemos construido en esta sesión:
+</p>
+
+<ul>
+<li>✅ Extracción de metadatos de PDF, DOCX, XLSX y PPTX en el edge, sin Node.js</li>
+<li>✅ Descarga del fichero limpio de metadatos (PDF rewriting + ZIP patching)</li>
+<li>✅ Análisis de seguridad con IA (Llama 3.3 70B) persistido en D1</li>
+<li>✅ Historial completo de análisis con logs de procesamiento</li>
+<li>✅ Protección anti-bots con Cloudflare Turnstile</li>
+<li>✅ Interfaz retro hacker verde con JetBrains Mono y efecto CRT</li>
+<li>✅ Despliegue completo en Cloudflare Workers con un solo comando</li>
+<li>✅ Coste de infraestructura: prácticamente cero (Workers Free tier)</li>
+</ul>
+
+<p>
+El repo está en <a href="https://github.com/Carluve/FOCA_VC">github.com/Carluve/FOCA_VC</a> y la aplicación live en <a href="https://foca-web.carluve.workers.dev">foca-web.carluve.workers.dev</a>.
+</p>
+
+<p>
+La próxima vez que alguien os diga que las herramientas de ciberseguridad clásicas están muertas, mostrarles esto. FOCA sigue aquí, ahora corriendo en 330 ubicaciones alrededor del mundo, con IA integrada y sin necesidad de instalar nada. El lado del mal también se moderniza.
+</p>
+
+<p>
+<b>Saludos,<br/>
+Carlos Luengo</b><br/>
+<i>Sr. Account Executive en Cloudflare</i>
+</p>
