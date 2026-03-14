@@ -1,0 +1,51 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "foca-web"
+main = "src/worker.ts"
+compatibility_date = "2024-05-12"
+compatibility_flags = ["nodejs_compat"]
+
+# ── Static Assets (Frontend built by Vite) ──────────────────────
+# Wrangler serves these automatically before hitting the Worker
+[assets]
+directory = "./dist"
+
+# ── Environment Variables ────────────────────────────────────────
+# Set the real password via: wrangler secret put AUTH_PASSWORD
+# For local dev, use .dev.vars file
+[vars]
+ENVIRONMENT = "production"
+
+# ── D1 Database Binding ─────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "foca-db"
+database_id = "63a368de-c5e0-4078-ac17-c37a9485bbfe"
+migrations_dir = "migrations"
+
+# ── R2 Bucket Binding (for storing original + cleaned files) ────
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "foca-files"
+
+# ── KV Namespace (for session tokens / quick cache) ─────────────
+[[kv_namespaces]]
+binding = "KV"
+id = "d560e3cca984471f83c7ae2cee2dfe8d"
+
+# ── Local Development Overrides ──────────────────────────────────
+[env.dev]
+name = "foca-web-dev"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "foca-db"
+database_id = "local"
+migrations_dir = "migrations"
+
+[[env.dev.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "foca-files-dev"
+
+[[env.dev.kv_namespaces]]
+binding = "KV"
+id = "local"
